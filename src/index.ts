@@ -1,6 +1,6 @@
 import algosdk from "algosdk";
 import * as algokit from "@algorandfoundation/algokit-utils";
-import WalletConnect from "@walletconnect/client";
+import { SignClient } from "@walletconnect/sign-client";
 import QRCodeModal from "algorand-walletconnect-qrcode-modal";
 import dotenv from "dotenv";
 
