@@ -22,17 +22,30 @@ async function loadClient() {
   return client;
 }
 
+import SignClient from "@walletconnect/sign-client";
+
 async function connectWallet() {
-  const connector = new WalletConnect({
-    bridge: "https://bridge.walletconnect.org",
-    qrcodeModal: QRCodeModal,
+  const client = await SignClient.init({
+    projectId: "68a0eda170a6615b8ded4b59b3947a93", // Replace with your actual WalletConnect Cloud project ID
+    relayUrl: "wss://relay.walletconnect.com",
   });
 
-  if (!connector.connected) {
-    await connector.createSession();
+  const { uri, approval } = await client.connect({
+    requiredNamespaces: {
+      algorand: {
+        methods: ["algo_signTxn"],
+        chains: ["algorand:testnet"],
+        events: [],
+      },
+    },
+  });
+
+  if (uri) {
+    QRCodeModal.open(uri, () => console.log("QR Code Modal closed"));
   }
 
-  return connector;
+  await approval();
+  return client;
 }
 
 async function claimAsset() {
@@ -57,13 +70,16 @@ async function claimAsset() {
       new Uint8Array(Buffer.from("claimAsset"))
     ], undefined, undefined, undefined, undefined, 6000); // Fee of 6000 microAlgos
 
-    // Connect wallet
-    const connector = await connectWallet();
-
-    // Request signing
-    const txnsToSign = [{ txn: algosdk.encodeUnsignedTransaction(txn) }];
-    const signedTxns = await connector.signTransaction(txnsToSign);
-
+   const client = await connectWallet();
+const txnsToSign = [{ txn: algosdk.encodeUnsignedTransaction(txn) }];
+const signedTxns = await client.request({
+  topic: client.session.keys[0], 
+  chainId: "algorand:testnet",
+  request: {
+    method: "algo_signTxn",
+    params: txnsToSign,
+  },
+});
     // Send the transaction
     const { txId } = await algodClient.sendRawTransaction(signedTxns).do();
     
